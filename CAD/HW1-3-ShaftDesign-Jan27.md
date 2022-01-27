@@ -27,30 +27,39 @@ What's more, as the description of this assignment said:
 
 ## Here is my Output in 3D view
 To show the Sprocket that fastened by key and collar.
-![image info](https://github.com/ice-bear-git/MEMS1029_Design_II/blob/main/Shaft_1.png)
+![image info](hthttps://github.com/ice-bear-git/_MEMS1029_onGithub/blob/main/CAD/HW1-3-ShaftDesign-Jan27/Visualization/Shaft_1.png)
 To show the Gear mounted by collar only.
-![image info](https://github.com/ice-bear-git/MEMS1029_Design_II/blob/main/Shaft_2.png)
+![image info](hhttps://github.com/ice-bear-git/_MEMS1029_onGithub/blob/main/CAD/HW1-3-ShaftDesign-Jan27/Visualization/Shaft_2.png)
 
 ## The Drawings for My designed components
 
 ### The Whole Shaft
+![image info](hhttps://github.com/ice-bear-git/_MEMS1029_onGithub/blob/main/CAD/HW1-3-ShaftDesign-Jan27/Visualization/Shaft_Full.png)
 
 ### The Shaft Body
+![image info](hhttps://github.com/ice-bear-git/_MEMS1029_onGithub/blob/main/CAD/HW1-3-ShaftDesign-Jan27/Visualization/Shaft_Body.png)
 
 ### The Key
+![image info](hhttps://github.com/ice-bear-git/_MEMS1029_onGithub/blob/main/CAD/HW1-3-ShaftDesign-Jan27/Visualization/Shaft_Key.png)
 
 ## The Details for the imported components
 
 ## The 25D Gear
+> Refer to: https://b2b.partcommunity.com/3d-cad-models/sso?cwid=5416#
+![image info](https://github.com/ice-bear-git/_MEMS1029_onGithub/blob/main/CAD/HW1-3-ShaftDesign-Jan27/Visualization/M%205%20B%2023_D25.png)
 
 ## The 25D Collar
+![image info](https://github.com/ice-bear-git/_MEMS1029_onGithub/blob/main/CAD/HW1-3-ShaftDesign-Jan27/Visualization/BEA_SSABR025_D25.png)
 
 ## The 30D Sprocket
+> Refer to: 
+![image info](https://github.com/ice-bear-git/_MEMS1029_onGithub/blob/main/CAD/HW1-3-ShaftDesign-Jan27/Visualization/KANA_FBK80B13_D30.png)
 
 ## The 30D Collar
 > Refer to: https://b2b.partcommunity.com/3d-cad-models/sso/shaft-collar-abr-stainless-steel-shaft-collars-one-split-stainless-steel-bea-ingranaggi?info=bea%2Fclamp_element%2Fshaft_collars%2Fshaft_collar_stainless_steel%2Fshaft_collar_abr_s_s_asmtab.prj&cwid=9880
 
-![image info]()
+![image info](https://github.com/ice-bear-git/_MEMS1029_onGithub/blob/main/CAD/HW1-3-ShaftDesign-Jan27/Visualization/BEA_SSABR030_D30.png)
 
 ## Ball Bearing
+![image info](https://github.com/ice-bear-git/_MEMS1029_onGithub/blob/main/CAD/HW1-3-ShaftDesign-Jan27/Visualization/BallBearing.png)
 
