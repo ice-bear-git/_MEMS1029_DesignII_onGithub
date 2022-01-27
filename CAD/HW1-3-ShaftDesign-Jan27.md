@@ -1,6 +1,9 @@
 # Shaft Design [MEMS1029 HW1-3]
-author: Ziang Cao
+author: Ziang Cao  
 ID: ZIC25
+> I wrote this in Markdown file and convert it to PDF by safari. It might not looking good locally, but pealse open the following link for a better reading experence. I believe it's a convenient and nice way for your reading (and grading).  
+> 
+> Refer to: https://github.com/ice-bear-git/_MEMS1029_DesignII_onGithub/blob/main/CAD/HW1-3-ShaftDesign-Jan27.md
 
 ## Problem Statement
 
