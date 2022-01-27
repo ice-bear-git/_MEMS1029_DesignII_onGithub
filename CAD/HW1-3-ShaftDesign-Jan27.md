@@ -27,20 +27,20 @@ What's more, as the description of this assignment said:
 
 ## Here is my Output in 3D view
 To show the Sprocket that fastened by key and collar.
-![image info](hthttps://github.com/ice-bear-git/_MEMS1029_onGithub/blob/main/CAD/HW1-3-ShaftDesign-Jan27/Visualization/Shaft_1.png)
+![image info](https://github.com/ice-bear-git/_MEMS1029_onGithub/blob/main/CAD/HW1-3-ShaftDesign-Jan27/Visualization/Shaft_1.png)
 To show the Gear mounted by collar only.
-![image info](hhttps://github.com/ice-bear-git/_MEMS1029_onGithub/blob/main/CAD/HW1-3-ShaftDesign-Jan27/Visualization/Shaft_2.png)
+![image info](https://github.com/ice-bear-git/_MEMS1029_onGithub/blob/main/CAD/HW1-3-ShaftDesign-Jan27/Visualization/Shaft_2.png)
 
 ## The Drawings for My designed components
 
 ### The Whole Shaft
-![image info](hhttps://github.com/ice-bear-git/_MEMS1029_onGithub/blob/main/CAD/HW1-3-ShaftDesign-Jan27/Visualization/Shaft_Full.png)
+![image info](https://github.com/ice-bear-git/_MEMS1029_onGithub/blob/main/CAD/HW1-3-ShaftDesign-Jan27/Visualization/Shaft_Full.png)
 
 ### The Shaft Body
-![image info](hhttps://github.com/ice-bear-git/_MEMS1029_onGithub/blob/main/CAD/HW1-3-ShaftDesign-Jan27/Visualization/Shaft_Body.png)
+![image info](https://github.com/ice-bear-git/_MEMS1029_onGithub/blob/main/CAD/HW1-3-ShaftDesign-Jan27/Visualization/Shaft_Body.png)
 
 ### The Key
-![image info](hhttps://github.com/ice-bear-git/_MEMS1029_onGithub/blob/main/CAD/HW1-3-ShaftDesign-Jan27/Visualization/Shaft_Key.png)
+![image info](https://github.com/ice-bear-git/_MEMS1029_onGithub/blob/main/CAD/HW1-3-ShaftDesign-Jan27/Visualization/Shaft_Key.png)
 
 ## The Details for the imported components
 
