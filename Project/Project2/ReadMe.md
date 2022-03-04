@@ -17,6 +17,12 @@ Yoosup Shin: yos34@pitt.edu
 呈现的时候：
 * 定义requirement（尺寸， 质量） --- 但这部分其实是设计完了再更新
 * 直接呈现完整产品的动画 【Overview】
+	- 用关键词highlight模型的特征：
+		+ Energy storage must be done using springs
+		+  Input power must come from a human-powered hand-crank.
+		+   Device must have a gearbox and gear train
+		+   我们找一下手摇发电机的大小？然后对比并展现我们的发电机size很小。
+		+   
 * 再根据要求 -- 逐一验证可行性 【我的产品牛逼】
 	- 从储能的角度 先分析弹簧
 	- Device must be capable of storing 10 Watt-hours of energy. 
