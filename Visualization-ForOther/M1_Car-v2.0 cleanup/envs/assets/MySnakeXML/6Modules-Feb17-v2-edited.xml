@@ -1,0 +1,46 @@
+<mujoco model="6Modules-Snake">
+    <compiler angle="radian" />
+    <size njmax="500" nconmax="100" />
+    <asset>
+        <mesh name="Tail" file="Tail.STL" />
+        <mesh name="Module_1" file="Module_1.STL" />
+        <mesh name="Module_2" file="Module_2.STL" />
+        <mesh name="Module_3" file="Module_3.STL" />
+        <mesh name="Module_4" file="Module_4.STL" />
+        <mesh name="Module_5" file="Module_5.STL" />
+        <mesh name="Head" file="Head.STL" />
+    </asset>
+    <worldbody>
+        <geom type="mesh" rgba="0.79216 0.81961 0.93333 1" mesh="Tail" />
+        <body name="Module_1" pos="0.0398 0.0145 0.043">
+            <inertial pos="0.15843 0.00036206 -0.023661" quat="0.268962 0.65397 0.269933 0.653543" mass="0.34605" diaginertia="0.00569944 0.00569937 7.43933e-05" />
+            <joint name="Joint_1" pos="0 0 0" axis="0 0 1" limited="true" range="-2 2" damping="5" frictionloss="20" />
+            <geom type="mesh" rgba="0.79216 0.81961 0.93333 1" mesh="Module_1" />
+            <body name="Module_2" pos="0.0675 0 -0.024">
+                <inertial pos="0.090932 0.00036206 0.00033889" quat="0.268962 0.65397 0.269933 0.653543" mass="0.34605" diaginertia="0.00569944 0.00569937 7.43933e-05" />
+                <joint name="Joint_2" pos="0 0 0" axis="0 -1 0" limited="true" range="-2 2" damping="5" frictionloss="20" />
+                <geom type="mesh" rgba="0.79216 0.81961 0.93333 1" mesh="Module_2" />
+                <body name="Module_3" pos="0.0675 0 0">
+                    <inertial pos="0.023432 0.00036206 0.00033889" quat="0.268962 0.65397 0.269933 0.653543" mass="0.34605" diaginertia="0.00569944 0.00569937 7.43933e-05" />
+                    <joint name="Joint_3" pos="0 0 0" axis="0 0 1" limited="true" range="-2 2" damping="5" frictionloss="20" />
+                    <geom type="mesh" rgba="0.79216 0.81961 0.93333 1" mesh="Module_3" />
+                    <body name="Module_4" pos="0.0675 0 0">
+                        <inertial pos="-0.044068 0.00036206 0.00033889" quat="0.268962 0.65397 0.269933 0.653543" mass="0.34605" diaginertia="0.00569944 0.00569937 7.43933e-05" />
+                        <joint name="Joint_4" pos="0 0 0" axis="0 -1 0" limited="true" range="-2 2" damping="5" frictionloss="20" />
+                        <geom type="mesh" rgba="0.79216 0.81961 0.93333 1" mesh="Module_4" />
+                        <body name="Module_5" pos="0.0675 0 0">
+                            <inertial pos="-0.11157 0.00036206 0.00033889" quat="0.268962 0.65397 0.269933 0.653543" mass="0.34605" diaginertia="0.00569944 0.00569937 7.43933e-05" />
+                            <joint name="Joint_5" pos="0 0 0" axis="0 0 1" limited="true" range="-2 2" damping="5" frictionloss="20" />
+                            <geom type="mesh" rgba="0.79216 0.81961 0.93333 1" mesh="Module_5" />
+                            <body name="Head" pos="0.0675 0 0">
+                                <inertial pos="-0.17907 0.00036206 0.00033889" quat="0.268962 0.65397 0.269933 0.653543" mass="0.34605" diaginertia="0.00569944 0.00569937 7.43933e-05" />
+                                <joint name="Joint_Head" pos="0 0 0" axis="0 1 0" limited="true" range="-2 2" damping="5" frictionloss="20" />
+                                <geom type="mesh" rgba="0.79216 0.81961 0.93333 1" mesh="Head" />
+                            </body>
+                        </body>
+                    </body>
+                </body>
+            </body>
+        </body>
+    </worldbody>
+</mujoco>

@@ -1,0 +1,137 @@
+<mujoco model="Snake_Env">
+    <compiler angle="degree" coordinate="local" inertiafromgeom="true"/>
+     <!-- changed timestep from 0.01 to 0.05 (0.0125*4?)   Simulation time step in seconds. 50ms = 0.05s-->
+     <!-- <option integrator="Euler" timestep="0.0125"> -->
+    <option integrator="RK4" timestep="0.0125">
+        <flag energy="enable" clampctrl="enable"/>
+    </option>
+    <size nconmax="1000"/>
+
+    <default>
+        <geom conaffinity="0" condim="3" friction="1 0.05 0.00001" margin="0.01" density="800" />
+<!--        <joint armature='0.001' damping="0" frictionloss="0.001" />-->
+        <!-- The kp in the defult>>position field is defined for actuator>>Position -->
+        <position ctrllimited="true" ctrlrange="-1.5 1.5" forcelimited="true" forcerange="-20.0 20.0" kp="20" gear="1"/>
+    </default>
+
+    <asset>
+        <mesh name="Head" file="Head.STL" />
+        <mesh name="Module_0_fromHead" file="Module_0_fromHead.STL" />
+        <mesh name="Module_1_fromHead" file="Module_1_fromHead.STL" />
+        <mesh name="Module_2_fromHead" file="Module_2_fromHead.STL" />
+        <mesh name="Module_3_fromHead" file="Module_3_fromHead.STL" />
+        <mesh name="Module_4_fromHead" file="Module_4_fromHead.STL" />
+        <mesh name="Module_5_fromHead" file="Module_5_fromHead.STL" />
+
+        <!-- Textures for floor and Target ball-->
+        <texture builtin="gradient" height="100" rgb1="1 1 1" rgb2="0 0 0" type="skybox" width="100"/>
+        <texture builtin="flat" height="1278" mark="cross" markrgb="1 1 1" name="texgeom" random="0.01"
+                 rgb1="0.8 0.6 0.4" rgb2="0.8 0.6 0.4" type="cube" width="127"/>
+        <texture builtin="checker" height="100" name="texplane" rgb1="0 0 0" rgb2="0.8 0.8 0.8" type="2d" width="100"/>
+
+        <material name="MatPlane" reflectance="0.5" shininess="1" specular="1" texrepeat="80 80" texture="texplane"/>
+        <material name="geom" texture="texgeom" texuniform="true"/>
+        <material name="MatTarget" rgba="1 0 0 1" reflectance="0.05" shininess="0.1" specular="0.1"/>
+    </asset>
+
+
+    <visual>
+        <map znear="0.0625"  />
+        <quality shadowsize="4096"/>
+    </visual>
+
+
+    <worldbody>
+        <light cutoff="100" diffuse="1 1 1" dir="-0 0 -1.3" directional="true" exponent="1" pos="0 0 1.3"
+               specular=".1 .1 .1"/>
+        <geom name="floor" size="80 80 10" material="MatPlane" conaffinity="1" condim="3" pos="0 0 -0.025" rgba="0.8 0.9 0.8 0.71" type="plane"/>
+
+        <body name="target_ball" pos="0 0 0.05">
+            <joint axis="1 0 0" name="target_slider_x" type="slide"/>
+            <joint axis="0 1 0" name="target_slider_y" type="slide"/>
+            <geom name="target_ball_geom" type="sphere" pos="0 0 0" size="0.05" material="MatTarget"/>
+            <camera name="track_ball" mode="trackcom" pos="0 0 6" euler="30 0 0"/>
+            <camera name="track_ball2" mode="targetbodycom" pos="0 0 1" zaxis="0 0 90" />
+        </body>
+
+        <!--  ================= 6-Module-Snake-Mar ================= /-->
+        <body name="Snake_Env" pos="0 0 0">
+
+            <!-- Simulate the firctional sliding on the floor -->
+            <joint axis="1 0 0" name="slider_x" type="slide" damping="0.01" frictionloss="0.2"/>
+            <joint axis="0 1 0" name="slider_y" type="slide" damping="0.01" frictionloss="0.2"/>
+            <joint axis="0 0 1" name="slider_z" type="slide" damping="0.01" frictionloss="1"/>
+
+            <joint axis="1 0 0" name="hinge_x" type="hinge"/>
+            <joint axis="0 1 0" name="hinge_y" type="hinge"/>
+            <joint axis="0 0 1" name="hinge_z"  type="hinge"/>
+
+            
+            <!-- M2-Snake Body -->
+            <body name="M2-Head" pos="0 0 0">
+                <geom type="mesh" rgba="0.79216 0.81961 0.93333 1" mesh="Head" />
+                <!-- Define camera and site [Don't know why we need them]-->
+                <camera name="cam_Head" pos="0.13 0 .025" fovy="90" euler="90 -90 0"/>
+                <site name="site_Head" pos="0.13 0 .025" type="box"  size=".01 .01 .01" rgba="0 0 1 0.9"/>
+                <body name="Module_0_fromHead" pos="0.0465 0 0.024">
+                    <inertial pos="-0.17907 0.012862 0.00033889" quat="0.268962 0.65397 0.269933 0.653543" mass="0.34605" diaginertia="0.00569944 0.00569937 7.43933e-05" />
+                    <joint name="Joint_0_fromHead" pos="0 0 0" axis="0 1 0" limited="true" range="-100 100" damping="1" frictionloss="20" />
+                    <geom type="mesh" rgba="0.79216 0.81961 0.93333 1" mesh="Module_0_fromHead" />
+                    <!-- <site name="site_Joint_0" pos="0.0465 0.015 .025" type="box"  size=".01 .01 .01" rgba="0 0 1 0.9"/> -->
+                    <body name="Module_1_fromHead" pos="-0.0675 0.0125 0">
+                        <inertial pos="-0.11157 0.00036206 0.00033889" quat="0.268962 0.65397 0.269933 0.653543" mass="0.34605" diaginertia="0.00569944 0.00569937 7.43933e-05" />
+                        <joint name="Joint_1_fromHead" pos="0 0 0" axis="0 0 1" limited="true" range="-100 100" damping="1" frictionloss="20" />
+                        <geom type="mesh" rgba="0.79216 0.81961 0.93333 1" mesh="Module_1_fromHead" />
+                        <body name="Module_2_fromHead" pos="-0.0675 0 0">
+                            <inertial pos="-0.044068 0.00036206 0.00033889" quat="0.268962 0.65397 0.269933 0.653543" mass="0.34605" diaginertia="0.00569944 0.00569937 7.43933e-05" />
+                            <joint name="Joint_2_fromHead" pos="0 0 0" axis="0 1 0" limited="true" range="-100 100" damping="1" frictionloss="20" />
+                            <geom type="mesh" rgba="0.79216 0.81961 0.93333 1" mesh="Module_2_fromHead" />
+                            <body name="Module_3_fromHead" pos="-0.0675 0 0">
+                                <inertial pos="0.023432 0.00036206 0.00033889" quat="0.268962 0.65397 0.269933 0.653543" mass="0.34605" diaginertia="0.00569944 0.00569937 7.43933e-05" />
+                                <joint name="Joint_3_fromHead" pos="0 0 0" axis="0 0 1" limited="true" range="-100 100" damping="1" frictionloss="20" />
+                                <geom type="mesh" rgba="0.79216 0.81961 0.93333 1" mesh="Module_3_fromHead" />
+                                <body name="Module_4_fromHead" pos="-0.0675 0 0">
+                                    <inertial pos="0.090932 0.00036206 0.00033889" quat="0.268962 0.65397 0.269933 0.653543" mass="0.34605" diaginertia="0.00569944 0.00569937 7.43933e-05" />
+                                    <joint name="Joint_4_fromHead" pos="0 0 0" axis="0 1 0" limited="true" range="-100 100" damping="1" frictionloss="20" />
+                                    <geom type="mesh" rgba="0.79216 0.81961 0.93333 1" mesh="Module_4_fromHead" />
+                                    <body name="Module_5_fromHead" pos="-0.0675 0 0">
+                                        <inertial pos="0.15843 0.00036206 0.00033889" quat="0.268962 0.65397 0.269933 0.653543" mass="0.34605" diaginertia="0.00569944 0.00569937 7.43933e-05" />
+                                        <joint name="Joint_5_fromHead" pos="0 0 0" axis="0 0 1" limited="true" range="-100 100" damping="1" frictionloss="20" />
+                                        <geom type="mesh" rgba="0.79216 0.81961 0.93333 1" mesh="Module_5_fromHead" />
+                                    </body>
+                                </body>
+                            </body>
+                        </body>
+                    </body>
+                </body>
+            </body>
+        </body>
+    </worldbody>
+
+    <actuator >
+        <position name="Actuator_0_fromHead" joint="Joint_0_fromHead"/>
+        <position name="Actuator_1_fromHead" joint="Joint_1_fromHead"/>
+        <position name="Actuator_2_fromHead" joint="Joint_2_fromHead"/>
+        <position name="Actuator_3_fromHead" joint="Joint_3_fromHead"/>
+        <position name="Actuator_4_fromHead" joint="Joint_4_fromHead"/>
+        <position name="Actuator_5_fromHead" joint="Joint_5_fromHead"/>
+    </actuator>
+
+    <sensor>
+        <!--
+        <jointpos name="sensor_jointpos_joint01" joint="joint01" />
+        <jointvel name="sensor_jointvel_joint01" joint="joint01" />
+        -->
+
+        <actuatorfrc name="Sensor_0_fromHead" actuator="Actuator_0_fromHead" />
+        <actuatorfrc name="Sensor_1_fromHead" actuator="Actuator_1_fromHead" />
+        <actuatorfrc name="Sensor_2_fromHead" actuator="Actuator_2_fromHead" />
+        <actuatorfrc name="Sensor_3_fromHead" actuator="Actuator_3_fromHead" />
+        <actuatorfrc name="Sensor_4_fromHead" actuator="Actuator_4_fromHead" />
+        <actuatorfrc name="Sensor_5_fromHead" actuator="Actuator_5_fromHead" />
+
+        <velocimeter name="sensor_velocimeter" site="site_Head"/>
+        <accelerometer name="sensor_accelerometer" site="site_Head"/>
+
+    </sensor>
+</mujoco>
