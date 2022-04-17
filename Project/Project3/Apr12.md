@@ -3,8 +3,8 @@
 Author: Ziang Cao
 
 STILL NEED TO DO:
-* Meanwhile the diameter of the hydrualic line. -- Just buy the meters.
-* Find the material and friction for the Pads against the Hub disc.
+* Meanwhile the diameter of the hydrualic line.
+* Find the material and frictio for the Pads against the Hub disc.
 
 
 ## Text
