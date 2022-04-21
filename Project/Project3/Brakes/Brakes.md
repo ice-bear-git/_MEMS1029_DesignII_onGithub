@@ -45,7 +45,7 @@ Based on the material of the `brake`, the coefficient would be different.
 
 We can gain some sense from the [two types of friction coefficient change between wheels and different surface](https://www.exploratorium.edu/cycling/brakes2.html)
 
-| Surface      	  | Adhesion coefficien |  Rolling coefficient | 
+| Surface | Adhesion coefficient |  Rolling coefficient | 
 | --------------  | ---------- | ------- |  
 | Dry Concrete		| 0.85 | 0.014 |  
 | Wet Concrete		| 0.55 | 0.014 | 
