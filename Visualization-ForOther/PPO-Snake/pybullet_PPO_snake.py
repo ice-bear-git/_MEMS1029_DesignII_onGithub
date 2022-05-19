@@ -1,17 +1,12 @@
+import math
 import os
 
 import gym
-from gym import error, spaces, utils
-from gym.utils import seeding
-
+import numpy as np
 import pybullet as p
 import pybullet_data
-import numpy as np
-import math
+from gym import spaces
 from sklearn import preprocessing
-
-# from gym import spaces
-import torch
 
 
 class PPO_Basic_Snake(gym.Env):
@@ -47,22 +42,13 @@ class PPO_Basic_Snake(gym.Env):
         # self.action_Scaling_list = [10, 10, 10, 10, 10, 10]
 
         # Relates to Rewards
-        self.reward_threshold = 1e5  # The upper boundary for rewards in one episode.
-
-        self.velocity_reward_weight = 0.3
-        self.distance_reward_weight = 0.7
-        self.orient_diff_reward_weight = 0.6
-        self.orient_change_reward_weight = 0.4
 
         # Relates to saved state
-        self.dist_At_savedState = 0
-        self.angle_diff_before = 0
-        self.head_pos_before = [0, 0]
-        self.body_pos_before = [0, 0]
+        # self.head_pos_before = [0, 0]
+        # self.body_pos_before = [0, 0]
 
         # Relates to visualization
         self.delay = (1 / 240.) * 2  # self.dt
-        self.DT = 0.2
 
         # Relates to PyBullet model
         p.resetSimulation()
@@ -96,21 +82,17 @@ class PPO_Basic_Snake(gym.Env):
 
         # 5. load the Snake
         self.ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+        self.startPosi = [0.2, 0, 0.3]
+        self.startPose = [0, 0, 0]
 
         self.URid = p.loadURDF(os.path.join(self.ROOT_DIR, "URDF_Snake/6-Module-Mar9-V1.urdf"),
                                useFixedBase=0,
-                               basePosition=[1, 1, 0.3],
+                               basePosition=self.startPosi,
                                # globalScaling=3.0,
                                globalScaling=2.0,
                                # basePosition=[0, .0, .0],      # TODO: 不知道该不该启用
                                flags=(p.URDF_USE_SELF_COLLISION | p.URDF_USE_INERTIA_FROM_FILE))
         self.num_motor = 6
-        # self.startPosi = [0, 0, 0]
-        # self.startPosi = [0.2, 0, 0]
-        # self.startPosi = [1, 1, 0.3]
-        self.startPosi = [0.5, 1, 0.3]
-        self.startPose = [0, 0, 0]
-        # self.startPose = [1, 1, 0]
 
         self.print_agent_info()
 
@@ -122,8 +104,9 @@ class PPO_Basic_Snake(gym.Env):
         # self.action_space = spaces.Discrete(90)
         # self.action_space = spaces.MultiDiscrete(nvec=[60,60,60,60,60,60])
         # self.action_space = spaces.MultiDiscrete(nvec= np.array([-3.0]*9), np.array([-3.0]*9))
-        self.action_space = spaces.Box(low=np.array([-60]*self.num_motor),
-                                       high=np.array([60]*self.num_motor), dtype=np.float64)      # num_motor个action输出，值域为-90到90
+        self.action_space = spaces.Box(low=np.array([-90]*self.num_motor),
+                                       high=np.array([90]*self.num_motor), dtype=np.float64)
+
         # self.observation_space = spaces.Box(np.array([-200.0]*11),
         #                                     np.array([200.0]*11))               # 10个状态值，值域为-1到1
         # self.observation_space = spaces.Box(low=np.array([-3.0]*11),
@@ -133,7 +116,7 @@ class PPO_Basic_Snake(gym.Env):
         # TODO!!!!! 非必要功能放到了外面。且ulities目录中提供了两种可视化测试agent的URDF/mujoco的工具。
 
     """ Reset """
-    def reset(self):
+    def reset(self, **kwargs):
         """
         Must be Implemented by the interface gym.Env
         :return:
@@ -194,7 +177,6 @@ class PPO_Basic_Snake(gym.Env):
         用此函数控制运动，简洁
         *: 要求调用function的时候，必须要写变量名=输入值
         """
-        # self.body_pos_before = self.get_body_positions_mean()
 
         # print(action)
 
@@ -478,25 +460,13 @@ class PPO_Basic_Snake(gym.Env):
             #                                                                   2])))
         pass
 
-    """ Simulate and save state for replay """
-    def simulate_save_state_for_Replay(self):
-        self.dist_At_savedState = self.get_body2target_distance()
-        self.angle_diff_before = self.get_orientation_angel_diffs(body_pos_before=self.body_pos_before,
-                                                                  body_pos_after=self.get_body_positions_mean())
-        self.body_pos_before = self.get_body_positions_mean()
-
     """ Save state """
     def save_state(self, isFirstSave=False):
         # In-memory snapshot of state
         if not isFirstSave:
             p.removeState(self.savedStateID)
         self.savedStateID = p.saveState()
-        # On-disk snapshot of state -- [unUsed]
-        # p.saveBullet(os.path.join(self.ROOT_DIR, "bulletBuffer/preRealState.bullet"))
-        self.dist_At_savedState = self.get_body2target_distance()
-        self.angle_diff_before = self.get_orientation_angel_diffs(body_pos_before=self.body_pos_before,
-                                                                  body_pos_after=self.get_body_positions_mean())
-        self.body_pos_before = self.get_body_positions_mean()
+
     """ restore from saved state ID """
     def restore_state(self):
         # Restore from In-memory snapshot of state
@@ -518,17 +488,12 @@ class PPO_Basic_Snake(gym.Env):
         done = False
         abandon = False
 
-        # self.dist_At_savedState = self.get_body2target_distance()
-        # self.angle_diff_before = self.get_orientation_angel_diffs(body_pos_before=self.body_pos_before,
-        #                                                           body_pos_after=self.get_body_position())
-        # self.body_pos_before = self.get_body_position()
-
         """ Apply the action """
         self.input_action(action=action)  # Apply the action and scaling it inside.
 
         """ initialize all reward aspects here """
         forward_reward, distance_reward, survive_reward, shape_reward, \
-        ctrl_cost, contact_cost, goal_reward, orient_reward = 0, 0, 0, 0, 0, 0, 0, 0
+            ctrl_cost, contact_cost, goal_reward, orient_reward = 0, 0, 0, 0, 0, 0, 0, 0
 
         """ Calculate the key indicators for performances from the records """
         # [1-1 Head]
