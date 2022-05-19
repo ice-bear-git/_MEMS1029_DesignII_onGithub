@@ -1,0 +1,497 @@
+import os
+
+import gym
+import pybullet as p
+import pybullet_data
+import numpy as np
+import math
+
+# from gym import spaces
+import torch
+
+
+class MPC_Basic_Snake(gym.Env):
+    """
+    Will require the implementation of function to reward inside of run_MPC_car_v2.py file.
+    """
+
+    def __init__(self,
+                 fix_target_position=True,
+                 target_position=None,
+                 action_Scaling_list=None):
+        """
+        Currently fixed all parameters here.
+        """
+        super().__init__()  # Initialize gym.Env
+
+        # When to stop
+        self.terminate_at_goal = True
+
+        # Relates to target
+        self.fix_target_position = fix_target_position
+        if target_position is None:
+            self.target_position = [1, -2, 0.5]
+            print("it should be updates")
+        else:
+            self.target_position = target_position
+
+        # Relates to Goal Geometry
+        self.goal_radius = 0.15
+        self.near_to_goal = 0.2
+
+        # Relates to Action Scaling
+        if action_Scaling_list is None:
+            action_Scaling_list = [1, 1, 1, 1, 1, 1]
+        self.action_Scaling_list = action_Scaling_list
+        # self.action_Scaling_list = [10, 10, 10, 10, 10, 10]
+
+        # Relates to visualization
+        self.delay = (1 / 240.) * 2  # self.dt
+        self.DT = 0.2
+
+        # Relates to PyBullet model
+        p.resetSimulation()
+        p.setAdditionalSearchPath(pybullet_data.getDataPath())
+        useRealTimeSim = 0
+        p.setRealTimeSimulation(useRealTimeSim)
+        # 2. load plane
+        self.planeUid = p.loadURDF("plane.urdf", useMaximalCoordinates=True)
+
+        # 3. Setup Target!
+        # self.ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+        # self.targetUid = p.loadURDF(os.path.join(self.ROOT_DIR, "URDFs/target_obj.urdf"),
+        #                             basePosition=self.target_position)
+        halfEx = [0.1, 0.1, 0.1]  # length width height
+        visual_shape_id = p.createVisualShape(
+            shapeType=p.GEOM_BOX,
+            halfExtents=halfEx,
+            rgbaColor=[1, 0, 0, 0.9]
+        )
+        collison_box_id = p.createCollisionShape(
+            shapeType=p.GEOM_BOX,
+            halfExtents=halfEx
+        )
+        objectUid = p.createMultiBody(
+            baseMass=100,
+            baseCollisionShapeIndex=collison_box_id,
+            baseVisualShapeIndex=visual_shape_id,
+            basePosition=self.target_position
+        )
+        self.targetUid = objectUid
+
+        # 5. load the Snake
+        """加载小车————joint_index对应：2 左后动力、3 右后动力、5 左前动力、7 右前动力；4 左前转向、6 右前转向"""
+        self.ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+        # self.targetUid = p.loadURDF(os.path.join(self.ROOT_DIR, "URDFs/target_obj.urdf"),
+        #                             basePosition=self.target_position)
+
+        # self.URid = p.loadURDF("racecar/racecar.urdf", basePosition=[0, .0, .0])
+        self.URid = p.loadURDF(os.path.join(self.ROOT_DIR, "URDF_Snake/6-Module-Mar9-V1.urdf"),
+                               useFixedBase=0,
+                               flags=(p.URDF_USE_SELF_COLLISION | p.URDF_USE_INERTIA_FROM_FILE))
+        self.num_motor = 6
+        self.startPosi = [0, 0, 0]
+        self.startPose = [0, 0, 0]
+
+        self.print_agent_info()
+
+        # Relates to MPC -- resetting for different rollouts
+        self.savedStateID = None
+        # TODO!!!!! 非必要功能放到了外面。且lities目录中提供了两种可视化测试agent的URDF/mujoco的工具。
+
+    def print_agent_info(self):
+        jointTypeList = ["REVOLUTE", "PRISMATIC", "SPHERICAL", "PLANAR", "FIXED"]
+        numJoints = p.getNumJoints(self.URid)
+        for i in range(numJoints):
+            info = p.getJointInfo(self.URid, i)
+            jointID = info[0]
+            jointName = info[1].decode('utf-8')
+            jointType = jointTypeList[info[2]]
+            jointLowerLimit = info[8]
+            jointUpperLimit = info[9]
+            jointMaxForce = info[10]
+            jointMaxVelocity = info[11]
+            print(jointID, " ", jointName, " ", jointType, " ", jointLowerLimit, " ",
+                  jointUpperLimit, " ", jointMaxForce, " ", jointMaxVelocity)
+        """
+        0   Joint_0_fromHead   REVOLUTE   -1.74   1.74   0.0   0.0
+        1   Joint_1_fromHead   REVOLUTE   -1.74   1.74   0.0   0.0
+        2   Joint_2_fromHead   REVOLUTE   -1.74   1.74   0.0   0.0
+        3   Joint_3_fromHead   REVOLUTE   -1.74   1.74   0.0   0.0
+        4   Joint_4_fromHead   REVOLUTE   -1.74   1.74   0.0   0.0
+        5   Joint_5_fromHead   REVOLUTE   -1.74   1.74   0.0   0.0
+        """
+        return
+
+    def save_state(self, isFirstSave=False):
+        # In-memory snapshot of state
+        if not isFirstSave:
+            p.removeState(self.savedStateID)
+        self.savedStateID = p.saveState()
+
+    def restore_state(self):
+        # Restore from In-memory snapshot of state
+        p.restoreState(self.savedStateID)
+        # Restore form On-disk snapshot of state -- [unUsed]
+        # p.resortState(fileName=os.path.join(self.ROOT_DIR, "bulletBuffer/preRealState.bullet"))
+
+    """ Reset """
+    def reset(self):
+        """
+        Must be Implemented by the interface gym.Env
+        :return:
+        """
+        # Initializing
+        # p.resetSimulation()
+        # p.setGravity(0, 0, -9.8)
+        p.setGravity(0, 0, -98)
+        # TODO: 这一行的含义还不确定是否有用。我先注释掉了
+        # p.setPhysicsEngineParameter(enableConeFriction=1)
+        p.setTimeStep(self.delay)  # 设置时延参数
+        p.configureDebugVisualizer(p.COV_ENABLE_RENDERING, 1)
+        # p.setAdditionalSearchPath(pybullet_data.getDataPath())
+        # p.configureDebugVisualizer(p.COV_ENABLE_RENDERING, 0)
+
+        # setup camera
+        p.resetDebugVisualizerCamera(cameraDistance=1.0,
+                                     cameraYaw=-90,
+                                     cameraPitch=-45,
+                                     cameraTargetPosition=[-0.1, -0.0, 0.65])
+        # For video recording --- Might be required for storing the trained results
+        useRealTimeSim = 0
+        p.setRealTimeSimulation(useRealTimeSim)
+
+        # Setup the Snake
+        p.resetBasePositionAndOrientation(self.URid, self.startPosi, p.getQuaternionFromEuler(self.startPose))
+
+        """ A convenient way to change the dynamics parameters  
+        --- <p.setJointMotorControlArray> NOT WORKING!!!
+        https://docs.google.com/document/d/10sXEhzFRSnvFcl3XxNGhnD4N2SedqwdAvK3dsihxVUA/edit#heading=h.d6og8ua34um1
+        Also see example below:
+        https://github.com/bulletphysics/bullet3/blob/e306b274f1885f32b7e9d65062aa942b398805c2/examples/pybullet/tensorflow/humanoid_running.py#L196
+        """
+        for i in range(self.num_motor):
+            # Useful!
+            # p.changeDynamics(self.URid, linkIndex=i, lateralFriction=0.0001, spinningFriction=0.005)
+            # p.changeDynamics(self.URid, linkIndex=i, lateralFriction=0.02, spinningFriction=0.02)
+            p.changeDynamics(self.URid, linkIndex=i, lateralFriction=0.2, spinningFriction=0.1)
+            p.setJointMotorControl2(bodyUniqueId=self.URid,
+                                    jointIndex=i,
+                                    controlMode=p.POSITION_CONTROL,
+                                    targetPosition=0)
+
+        # Setup target
+        # target_startOrientation = p.getQuaternionFromEuler([0, 0, 0])
+        # p.resetBasePositionAndOrientation(self.targetUid, self.target_position, target_startOrientation)
+
+        # step stepSimulation --- must be done at the end of reset function
+        for i in range(100):
+            p.stepSimulation()  # Make sure the target will move to the desired position
+        # end the for loop
+
+        return self.get_obs()
+
+    def render(self, mode='human'):
+        """
+        Must be Implemented by the interface gym.Env
+        :param mode:
+        :return:
+        """
+        pass
+
+    def input_action(self, *, action):
+        """
+        用此函数控制运动，简洁
+        *: 要求调用function的时候，必须要写变量名=输入值
+        """
+        for i in range(self.num_motor):
+            p.setJointMotorControl2(bodyUniqueId=self.URid,
+                                    jointIndex=i,
+                                    controlMode=p.POSITION_CONTROL,
+                                    targetPosition=action[i] * self.action_Scaling_list[i])
+
+        p.stepSimulation()
+
+
+
+    """ [Private] Position """
+    def get_target_position(self):
+        target_pos = self.target_position
+        return target_pos[0], target_pos[1]
+
+    def get_head_position(self):
+        head_position_frame_world = p.getLinkState(self.URid, linkIndex=0)[4]
+        head_x, head_y = head_position_frame_world[0], head_position_frame_world[1]
+        print("head_posi: x: {}, y: {}".format(head_x, head_y))
+        return head_x, head_y
+
+    def get_tail_position(self):
+        tail_position_frame_world = p.getLinkState(self.URid, linkIndex=self.num_motor-1)[4]
+        tail_x, tail_y = tail_position_frame_world[0], tail_position_frame_world[1]
+        print("head_posi: x: {}, y: {}".format(tail_x, tail_y))
+        return tail_x, tail_y
+
+    def get_bodyMean_position(self):
+        x_position = []
+        y_position = []
+        for i in range(self.num_motor):
+            position_frame_world = p.getLinkState(self.URid, linkIndex=i)[4]
+            x_position.append(position_frame_world[0])
+            y_position.append(position_frame_world[1])
+
+        body_x = np.mean(x_position)
+        body_y = np.mean(y_position)
+
+        print("body_x: {}, body_y: {}".format(body_x, body_y))
+        return body_x, body_y
+
+    """ [Public] Distance + Velocity """
+    def cal_tail2head_length(self):
+        head_x, head_y = self.get_head_position()
+        tail_x, tail_y = self.get_tail_position()
+        return np.linalg.norm(np.array([tail_x, tail_y]) - np.array([head_x, head_y]))
+
+    def cal_head2target_distance(self):
+        head_x, head_y = self.get_head_position()
+        target_x, target_y = self.get_target_position()
+        return np.linalg.norm(np.array([target_x, target_y]) - np.array([head_x, head_y]))
+
+    # def cal_bodyMean_velocity(self):
+
+    """ [Private] YAW degrees """
+    def get_head_yaw_degree(self):
+        world_rotation_frame = p.getLinkState(self.URid, linkIndex=0)[5]
+        head_yaw = math.degrees(p.getEulerFromQuaternion(world_rotation_frame)[2])
+        return head_yaw
+
+    def get_bodyMean_yaw_degree(self):
+        yaw_degrees = []
+        for i in range(self.num_motor):
+            world_rotation_frame = p.getLinkState(self.URid, linkIndex=i)[5]
+            yaw_degrees.append(math.degrees(p.getEulerFromQuaternion(world_rotation_frame)[2]))
+
+        bodyMean_yaw_degree = np.mean(yaw_degrees)
+        print("bodyMean_yaw_degree: {}".format(bodyMean_yaw_degree))
+        return bodyMean_yaw_degree
+
+    def get_head2target_yaw_degree(self):
+        """ Front-Left is positive"""
+        head_x, head_y = self.get_head_position()
+        target_x, target_y = self.get_target_position()
+
+        adjacent = target_x - head_x
+        opposite = target_y - head_y
+
+        head2target_yaw_degree = math.degrees(math.atan2(opposite, adjacent))
+        return head2target_yaw_degree
+
+    def get_bodyMean2target_yaw_degree(self):
+        """ Front-Left is positive"""
+        body_x, body_y = self.get_bodyMean_position()
+        target_x, target_y = self.get_target_position()
+
+        adjacent = target_x - body_x
+        opposite = target_y - body_y
+
+        bodyMean2target_yaw_degree = math.degrees(math.atan2(opposite, adjacent))
+        return bodyMean2target_yaw_degree
+
+    def get_bodyMean_velocity_degree(self):
+        x_velocity = []
+        y_velocity = []
+        for i in range(self.num_motor):
+            position_frame_world = p.getLinkState(self.URid, linkIndex=i, computeLinkVelocity=1)[6]
+            x_velocity.append(position_frame_world[0])
+            y_velocity.append(position_frame_world[1])
+
+        body_Vx = np.mean(x_velocity)
+        body_Vy = np.mean(y_velocity)
+
+        print("body_Vx: {}, body_Vy: {}".format(body_Vx, body_Vy))
+
+        adjacent = body_Vx
+        opposite = body_Vy
+
+        bodyMean_velocity_degree = math.degrees(math.atan2(opposite, adjacent))
+        return bodyMean_velocity_degree
+
+    """ [Public] Orientation angles """
+    def cal_body2Target_velocityOrientDiff(self):
+        """
+        MOST IMPORTANT
+        When it's positive, the body should turn left!
+        """
+
+        bodyMean2target_yaw_degree = self.get_bodyMean2target_yaw_degree()
+        bodyMean_velocity_degree = self.get_bodyMean_yaw_degree()
+        bodyVelocity_orientDiff = bodyMean2target_yaw_degree - bodyMean_velocity_degree
+        print("bodyMean2target_yaw_degree: {}, bodyMean_velocity_degree: {}, bodyVelocity_orientDiff: {}".format(
+            bodyMean2target_yaw_degree, bodyMean_velocity_degree, bodyVelocity_orientDiff))
+        return bodyVelocity_orientDiff
+
+    def cal_headBody2Target_towardOrientDiff(self):
+        """ When it's positive, it should rotate the head to the Front-Left """
+        head2target_yaw_degree = self.get_head2target_yaw_degree()
+        bodyMean2target_yaw_degree = self.get_bodyMean2target_yaw_degree()
+        targetToward_orientDiff = head2target_yaw_degree - bodyMean2target_yaw_degree
+        return targetToward_orientDiff
+
+    def cal_bodyShape_orientDiff(self):
+        """ When it's positive, the head is more front-left than the average links """
+        head_yaw_degree = self.get_head_yaw_degree()
+        bodyMean_yaw_degree = self.get_bodyMean_yaw_degree()
+        bodyShape_orientDiff = head_yaw_degree - bodyMean_yaw_degree
+
+        return bodyShape_orientDiff
+
+    """ Printer Agent """
+    def print_agent_info(self):
+        jointTypeList = ["REVOLUTE", "PRISMATIC", "SPHERICAL", "PLANAR", "FIXED"]
+        numJoints = p.getNumJoints(self.URid)
+        for i in range(numJoints):
+            info = p.getJointInfo(self.URid, i)
+            jointID = info[0]
+            jointName = info[1].decode('utf-8')
+            jointType = jointTypeList[info[2]]
+            jointLowerLimit = info[8]
+            jointUpperLimit = info[9]
+            jointMaxForce = info[10]
+            jointMaxVelocity = info[11]
+            print(jointID, " ", jointName, " ", jointType, " ", jointLowerLimit, " ",
+                  jointUpperLimit, " ", jointMaxForce, " ", jointMaxVelocity)
+        """
+        0   Joint_0_fromHead   REVOLUTE   -1.74   1.74   0.0   0.0
+        1   Joint_1_fromHead   REVOLUTE   -1.74   1.74   0.0   0.0
+        2   Joint_2_fromHead   REVOLUTE   -1.74   1.74   0.0   0.0
+        3   Joint_3_fromHead   REVOLUTE   -1.74   1.74   0.0   0.0
+        4   Joint_4_fromHead   REVOLUTE   -1.74   1.74   0.0   0.0
+        5   Joint_5_fromHead   REVOLUTE   -1.74   1.74   0.0   0.0
+        """
+        return
+
+    def print_body_position(self):
+        for i in range(self.num_motor):
+            print("The {} link!".format(i))
+            linkStates = p.getLinkState(self.URid, linkIndex=i)
+            position_linkcom_world = linkStates[0]
+            world_rotation_linkcom = linkStates[1]
+            position_linkcom_frame = linkStates[2]
+            frame_rotation_linkcom = linkStates[3]
+            position_frame_world = linkStates[4]
+            world_rotation_frame = linkStates[5]
+            # worldLinkLinearVelocity = p.getLinkState(self.URid, linkIndex=i, computeLinkVelocity=1)[6]
+            """
+            position_linkcom_world, world_rotation_linkcom,
+            position_linkcom_frame, frame_rotation_linkcom, -- want!!!
+            position_frame_world, world_rotation_frame,
+            linearVelocity_linkcom_world, angularVelocity_linkcom_world
+            """
+            print("0. position_linkcom_world: ", position_linkcom_world)
+            """ Convert quaternion [x,y,z,w] to Euler [roll, pitch, yaw] as in URDF/SDF convention """
+            print("1. world_rotation_linkcom: ", math.degrees(p.getEulerFromQuaternion(world_rotation_linkcom)[2]))
+
+            print("2. position_linkcom_frame: ", position_linkcom_frame)
+            print("3. frame_rotation_linkcom: ", math.degrees(p.getEulerFromQuaternion(frame_rotation_linkcom)[2]))
+
+            print("4. position_frame_world: ", position_frame_world)
+            print("5. world_rotation_frame: ", math.degrees(p.getEulerFromQuaternion(world_rotation_frame)[2]))
+
+            # print("worldLinkLinearVelocity: ", worldLinkLinearVelocity)
+
+            # curr_posi = p.getLinkState(self.URid, linkIndex=i)[0]
+            # curr_pose = p.getLinkState(self.URid, linkIndex=i)[1]
+            # curr_local_posi = p.getLinkState(self.URid, linkIndex=i)[2]
+            # curr_local_pose = p.getLinkState(self.URid, linkIndex=i)[5]
+            # print("Link: index: {}, position: {} pose: {}".format(i, curr_posi,
+            #                                                       math.degrees(p.getEulerFromQuaternion(curr_pose)[2])))
+            # print("\tcurr_local_posi: {}, curr_local_pose: {}".format(i, curr_local_posi,
+            #                                                           math.degrees(
+            #                                                               p.getEulerFromQuaternion(curr_local_pose)[
+            #                                                                   2])))
+        pass
+
+    """ Simulate and save state for replay """
+    def simulate_save_state_for_Replay(self):
+        self.dist_At_savedState = self.get_body2target_distance()
+        self.angle_diff_before = self.get_orientation_angel_diffs(body_pos_before=self.body_pos_before,
+                                                                  body_pos_after=self.get_body_positions_mean())
+        self.body_pos_before = self.get_body_positions_mean()
+
+    """ Save state """
+    def save_state(self, isFirstSave=False):
+        # In-memory snapshot of state
+        if not isFirstSave:
+            p.removeState(self.savedStateID)
+        self.savedStateID = p.saveState()
+        # On-disk snapshot of state -- [unUsed]
+        # p.saveBullet(os.path.join(self.ROOT_DIR, "bulletBuffer/preRealState.bullet"))
+        self.dist_At_savedState = self.get_body2target_distance()
+        self.angle_diff_before = self.get_orientation_angel_diffs(body_pos_before=self.body_pos_before,
+                                                                  body_pos_after=self.get_body_positions_mean())
+        self.body_pos_before = self.get_body_positions_mean()
+    """ restore from saved state ID """
+    def restore_state(self):
+        # Restore from In-memory snapshot of state
+        p.restoreState(self.savedStateID)
+        # Restore form On-disk snapshot of state -- [unUsed]
+        # p.resortState(fileName=os.path.join(self.ROOT_DIR, "bulletBuffer/preRealState.bullet"))
+
+    """ Real step and reward """
+    def step(self, action=None):
+        """
+        Must be Implemented by the interface gym.Env
+        1. apply action by p.stepSimulation() --- input_action() method
+        2. calculate the reward after the action
+        3. return obs, reward, done, info
+        """
+
+        """ Initialize the return values """
+        reward = 0
+        done = False
+        abandon = False
+
+        # self.dist_At_savedState = self.get_body2target_distance()
+        # self.angle_diff_before = self.get_orientation_angel_diffs(body_pos_before=self.body_pos_before,
+        #                                                           body_pos_after=self.get_body_position())
+        # self.body_pos_before = self.get_body_position()
+
+        """ Apply the action """
+        self.input_action(action=action)  # Apply the action and scaling it inside.
+
+        """ initialize all reward aspects here """
+        forward_reward, distance_reward, survive_reward, shape_reward, \
+        ctrl_cost, contact_cost, goal_reward, orient_reward = 0, 0, 0, 0, 0, 0, 0, 0
+
+        """ Calculate the key indicators for performances from the records """
+        # [1-1 Head]
+        # [1-2 Body] forward_reward -- Velocity
+
+        # [2] goal_reward
+        """ distance_reward """
+        tail2head_length = self.cal_tail2head_length()
+        print("tail2head_length: ", tail2head_length)
+        head2target_distance = self.cal_head2target_distance()
+        print("head2target_distance: ", head2target_distance)
+
+        """ get_body_orientation_diff """
+        targetToward_orientDiff = self.cal_headBody2Target_towardOrientDiff()
+        print("targetToward_orientDiff: ", targetToward_orientDiff)
+        bodyShape_orientDiff = self.cal_bodyShape_orientDiff()
+        print("bodyShape_orientDiff: ", bodyShape_orientDiff)
+        bodyVelocity_orientDiff = self.cal_body2Target_velocityOrientDiff()
+        print("bodyVelocity_orientDiff: ", bodyVelocity_orientDiff)
+
+        """ Whether we reach the goal or not """
+
+        """ Whether we abandon this trail or not """
+
+        """ Get Overall reward """
+        reward += distance_reward + shape_reward + 1e-2 * orient_reward
+        # reward += 5e2 * (distance_reward + 0) + (orient_reward + goal_reward)
+        reward += (survive_reward - ctrl_cost - contact_cost) + goal_reward
+        # print("reward", reward)
+        next_observation = self.get_obs()
+        # return next_observation, reward, done, info
+        return next_observation, reward, done, abandon
+
+
